@@ -38,11 +38,11 @@ int rini_strncmp(const char* first, const char* second, unsigned max)
 
     for ( ; *first_buf != 0; first++, i++)
     {
-	    if (i >= max)
-	    {
-		    return -1;
-	    }
-	    
+        if (i >= max)
+        {
+            return -1;
+        }
+
         for ( ; *second_buf != 0; second_buf++)
         {
             if (*first_buf < *second_buf)
@@ -55,7 +55,7 @@ int rini_strncmp(const char* first, const char* second, unsigned max)
             }
         }
     }
-	
+
     return 0; // TODO: *first_buf - *second_buf.
 }
 
