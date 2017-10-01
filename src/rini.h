@@ -37,15 +37,15 @@ typedef enum _parser_flags_t  {
 } parser_flags_t;
 
 typedef enum _bool_type_t {
-	BOOL_KEY_FALSE = 0,
-	BOOL_KEY_TRUE = 1,
-	BOOL_KEY_ERROR = 2
+    BOOL_KEY_FALSE = 0,
+    BOOL_KEY_TRUE = 1,
+    BOOL_KEY_ERROR = 2
 } bool_type_t;
 
 typedef struct _bool_key_record_t {
-	bool_type_t val;
-	char* key;
-	unsigned size;
+    bool_type_t val;
+    char* key;
+    unsigned size;
 } bool_keys_t;
 
 #endif // RINI_H
