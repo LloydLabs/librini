@@ -1,8 +1,6 @@
 #include "rini.h"
 #include "lib.h"
 
-#include <stdio.h>
-
 static char* rini_seek_section(const char* parent, char* config_buf, unsigned size)
 {
     unsigned buf_size = 0;
@@ -69,99 +67,99 @@ static char* rini_seek_section(const char* parent, char* config_buf, unsigned si
 
 static int rini_signed_int_str(char* str, parser_flags_t* flags)
 {
-	int ret = -1;
-	
-	*str++ = 0;
-	str = (char*)str;
-	
-	if (*str == '+' || *str == '-')
-	{
-		str++;
-		if (*str == '-')
-			*flags |= INT_NEG_NUMB;
-	}
-	else if (*str == '-')
-	{
-		*flags |= INT_NEG_NUMB;
-		str++;
-	}
-	
-	for ( ; *str != 0; str++)
-	{
-		ret = ((10 * ret) - (*str - '0'));
-	}
-	
-	ret *= -1;
-	
-	if (*flags & INT_NEG_NUMB)
-	{
-		ret = (~ret) + 1;
-	}
-	
-	return ret;
+    int ret = -1;
+
+    *str++ = 0;
+    str = (char*)str;
+
+    if (*str == '+' || *str == '-')
+    {
+        str++;
+        if (*str == '-')
+            *flags |= INT_NEG_NUMB;
+    }
+    else if (*str == '-')
+    {
+        *flags |= INT_NEG_NUMB;
+        str++;
+    }
+
+    for ( ; *str != 0; str++)
+    {
+        ret = ((10 * ret) - (*str - '0'));
+    }
+
+    ret *= -1;
+
+    if (*flags & INT_NEG_NUMB)
+    {
+        ret = (~ret) + 1;
+    }
+
+    return ret;
 }
 
 static int rini_is_escaped(char c)
 {
-	// https://en.wikipedia.org/wiki/INI_file#Escape_characters
-	const char escape_chars[] = {
-			'"', ';', '#', ':',
-			'=', '\\'
-	};
-	
-	for (int i = 0; i < ARRAY_SIZE(escape_chars); i++)
-	{
-		if (c == escape_chars[i])
-		{
-			return 1;
-		}
-	}
-	
-	return 0;
+    // https://en.wikipedia.org/wiki/INI_file#Escape_characters
+    const char escape_chars[] = {
+            '"', ';', '#', ':',
+            '=', '\\'
+    };
+
+    for (int i = 0; i < ARRAY_SIZE(escape_chars); i++)
+    {
+        if (c == escape_chars[i])
+        {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
 {
-	if (buf == NULL || buf_size > MAX_BOOL_KEY_SIZE)
-		return BOOL_KEY_ERROR;
-	
-	bool_keys_t bool_keys[] = {
-			{ BOOL_KEY_TRUE, "1", 1 }, { BOOL_KEY_TRUE, "yes", 3 },
-			{ BOOL_KEY_TRUE, "on", 2 }, { BOOL_KEY_TRUE, "true", 4 },
-			{ BOOL_KEY_FALSE, "0", 1 },  { BOOL_KEY_FALSE, "no", 2 },
-			{ BOOL_KEY_FALSE, "off", 3 }, { BOOL_KEY_FALSE, "false", 5 }
-	};
-	
-	char bool_key[MAX_BOOL_KEY_SIZE];
+    if (buf == NULL || buf_size > MAX_BOOL_KEY_SIZE)
+        return BOOL_KEY_ERROR;
+
+    bool_keys_t bool_keys[] = {
+            { BOOL_KEY_TRUE, "1", 1 }, { BOOL_KEY_TRUE, "yes", 3 },
+            { BOOL_KEY_TRUE, "on", 2 }, { BOOL_KEY_TRUE, "true", 4 },
+            { BOOL_KEY_FALSE, "0", 1 },  { BOOL_KEY_FALSE, "no", 2 },
+            { BOOL_KEY_FALSE, "off", 3 }, { BOOL_KEY_FALSE, "false", 5 }
+    };
+
+    char bool_key[MAX_BOOL_KEY_SIZE];
 
 #ifdef NO_LIBC
-	rini_memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
-	rini_memcpy(bool_key, buf, buf_size);
+    rini_memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
+    rini_memcpy(bool_key, buf, buf_size);
 #else
-	memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
-	memcpy(bool_key, buf, buf_size);
+    memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
+    memcpy(bool_key, buf, buf_size);
 #endif
-	
-	for (unsigned i = 0; i < ARRAY_SIZE(bool_keys); i++)
-	{
-		if (bool_keys[i].size > buf_size)
-		{
-			continue;
-		}
-		
-		if (
+
+    for (unsigned i = 0; i < ARRAY_SIZE(bool_keys); i++)
+    {
+        if (bool_keys[i].size > buf_size)
+        {
+            continue;
+        }
+
+        if (
 #ifdef NO_LIBC
-			rini_memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
+            rini_memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
 #else
-			memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
+            memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
 #endif
-			)
-		{
-			return bool_keys[i].val;
-		}
-	}
-	
-	return BOOL_KEY_ERROR;
+            )
+        {
+            return bool_keys[i].val;
+        }
+    }
+
+    return BOOL_KEY_ERROR;
 }
 
 static int rini_get_node(char* node, char* name, void* out, unsigned out_size, value_types_t val_type, unsigned size)
@@ -181,10 +179,10 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
     memset(name_parsed, 0, MAX_NAME);
     memset(int_str, 0, MAX_INT_STR_SIZE);
 #endif
-	
-	char* name_buf = (char*)name_parsed, *int_buf = (char*)int_str, *bool_buf = (char*)bool_str, *node_buf = node;
+
+    char* name_buf = (char*)name_parsed, *int_buf = (char*)int_str, *bool_buf = (char*)bool_str, *node_buf = node;
     unsigned buf_size = 0, val_size = 1;
-	
+
     for ( ; PTR_NOT_END(node_buf) && buf_size < size; node_buf++, buf_size++)
     {
         for ( ; *node_buf != '=' && buf_size < size; node_buf++, buf_size++)
@@ -213,12 +211,12 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
     {
         return 0;
     }
-    
+
     if (buf_size++ > size)
     {
         return 0;
     }
-	
+
     node_buf++;
 
     parser_flags_t parser_flags = FLAGS_DEFAULT;
@@ -243,9 +241,9 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
         switch (val_type)
         {
             case STRING_VAL:
-	            if ((val_size + 1) > out_size)
-		            return 0;
-		        
+                if ((val_size + 1) > out_size)
+                    return 0;
+                
                 if (buf_size == 0)
                 {
                     if (*node_buf == '"')
@@ -264,11 +262,11 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
                 if (parser_flags & LAST_ESCAPE_CHAR)
                 {
                     parser_flags |= ESCAPE_NOT_FOUND;
-	                if (rini_is_escaped(*node_buf))
-	                {
-		                *val_buf++ = *node_buf;
-		                parser_flags &= ~ESCAPE_NOT_FOUND;
-	                }
+                    if (rini_is_escaped(*node_buf))
+                    {
+                        *val_buf++ = *node_buf;
+                        parser_flags &= ~ESCAPE_NOT_FOUND;
+                    }
 
                     if (parser_flags & ESCAPE_NOT_FOUND)
                     {
@@ -294,18 +292,18 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
                 break;
 
             case BOOL_VAL:
-	            if (val_size > (MAX_BOOL_KEY_SIZE - 1))
-	            {
-		            return 0;
-	            }
-		
-		        *bool_buf++ = *node_buf;
+                if (val_size > (MAX_BOOL_KEY_SIZE - 1))
+                {
+                    return 0;
+                }
+
+                *bool_buf++ = *node_buf;
                 break;
 
             case INT_VAL:
                 if (val_size > (MAX_INT_STR_SIZE - 1))
                 {
-	                return 0;
+                    return 0;
                 }
 
                 if (buf_size == 0 && *node_buf == '-')
@@ -318,7 +316,7 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
                 {
                     return 0;
                 }
-				
+
                 *int_buf++ = *node_buf;
                 break;
         }
@@ -332,13 +330,13 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
     {
         *int_buf++ = 0;
         int_buf = (char*)int_str;
-	    
-	    int numb_buf;
-	    if ((numb_buf = rini_signed_int_str(int_buf, &parser_flags)) < 0)
-	    {
-		    return 0;
-	    }
-	    
+
+        int numb_buf;
+        if ((numb_buf = rini_signed_int_str(int_buf, &parser_flags)) < 0)
+        {
+            return 0;
+        }
+
 #ifdef NO_LIBC
         rini_memcpy(out, &numb_buf, sizeof(int));
 #else
@@ -347,13 +345,13 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
     }
     else if (val_type == BOOL_VAL)
     {
-	    bool_type_t bool_val = BOOL_KEY_ERROR;
-	    if ((bool_val = rini_get_bool(bool_str, val_size)) == BOOL_KEY_ERROR)
-	    {
-		    return 0;
-	    }
-	    
-	    *val_buf = bool_val;
+        bool_type_t bool_val = BOOL_KEY_ERROR;
+        if ((bool_val = rini_get_bool(bool_str, val_size)) == BOOL_KEY_ERROR)
+        {
+            return 0;
+        }
+
+        *val_buf = bool_val;
     }
 
     return 1;
@@ -362,7 +360,7 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
 int rini_get_key(const char* parent, char* key, char* config, unsigned config_size, const void* out, unsigned out_size, value_types_t type)
 {
     char* config_buf = config;
-    
+
     if (key != NULL)
     {
         if ((config_buf = rini_seek_section(parent, config_buf, config_size)) == NULL)
@@ -370,7 +368,7 @@ int rini_get_key(const char* parent, char* key, char* config, unsigned config_si
             return 0;
         }
     }
-	
+
     char line[MAX_LINE_SIZE(out_size)];
 
 #ifdef NO_LIBC
