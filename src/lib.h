@@ -7,7 +7,7 @@
 #ifndef RINI_LIB_H
 #define RINI_LIB_H
 
-#ifdef NO_LIBC
+#ifdef __STDC_HOSTED__
 
 #ifndef NULL
 #define NULL ((void*)0)
