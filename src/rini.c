@@ -20,7 +20,8 @@
  * @param size The size of the configuration buffer.
  * @return Returns an address to where the [parent] starts.
  */
-static char* rini_seek_section(const char* parent, char* config_buf, unsigned size)
+static char* rini_seek_section(const char* parent, char* config_buf,
+                               unsigned size)
 {
     unsigned buf_size = 0;
     int head_found = 0;
@@ -197,7 +198,9 @@ static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
  * @param size The overall size of the configuration buffer, this will make sure that the @param out_size is not greater than our overall size.
  * @return Returns 1 on success.
  */
-static int rini_get_node(char* node, char* name, void* out, unsigned out_size, value_types_t val_type, unsigned size)
+static int rini_get_node(char* node, char* name, void* out,
+                         unsigned out_size, value_types_t val_type,
+                         unsigned size)
 {
     if (out == NULL)
     {
@@ -397,7 +400,9 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
  * @param type The type of data that the key holds.
  * @return On success 1 is returned
  */
-int rini_get_key(const char* parent, const char* key, const char* config, unsigned config_size, const void* out, unsigned out_size, value_types_t type)
+int rini_get_key(const char* parent, const char* key, const char* config,
+                 unsigned config_size, const void* out, unsigned out_size,
+                 value_types_t type)
 {
     char* config_buf = (char*)config;
 
