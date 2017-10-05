@@ -12,14 +12,13 @@
  */
 
 #include "rini.h"
-#include "lib.h"
 
 /**
- * seeks to the location of the start of the [parent]
- * @param parent The name of the parent
- * @param config_buf The configuration
- * @param size The size of the confuration
- * @return Returns an address to where the [parent] starts
+ * Seeks to the location of the start of the [parent], sets the @param config_buf to the location the definition ends at.
+ * @param parent The parent [section] to find the offset of.
+ * @param config_buf The contents of the ini configuration, we need this so that we can find the offset to the parent.
+ * @param size The size of the configuration buffer.
+ * @return Returns an address to where the [parent] starts.
  */
 static char* rini_seek_section(const char* parent, char* config_buf, unsigned size)
 {
@@ -27,12 +26,7 @@ static char* rini_seek_section(const char* parent, char* config_buf, unsigned si
     int head_found = 0;
 
     char current_head[MAX_NAME];
-
-#ifdef __STDC_HOSTED__
-    rini_memset(current_head, 0, MAX_NAME);
-#else
     memset(current_head, 0, MAX_NAME);
-#endif
 
     char* head_buf = (char*)current_head;
 
@@ -64,13 +58,7 @@ static char* rini_seek_section(const char* parent, char* config_buf, unsigned si
 
             config_buf++;
 
-            if (
-#ifdef __STDC_HOSTED__
-                    rini_strncmp(parent, (const char*)current_head, MAX_NAME) == 0
-#else
-                    strncmp(parent, (const char*)current_head, MAX_NAME) == 0
-#endif
-                    )
+            if (strncmp(parent, (const char*)current_head, MAX_NAME) == 0)
             {
                 head_found = 1;
                 break;
@@ -86,10 +74,10 @@ static char* rini_seek_section(const char* parent, char* config_buf, unsigned si
 }
 
 /**
- * converts a string into a signed integer
- * @param str The string to convert.
+ * Converts a string into a signed integer, two's compliment is used here for converting to negative (bitwise NOT then addition of one.)
+ * @param str The string to convert. Please note, strings *may* contain '+' (even though this is somewhat redundant), and also '-'.
  * @param flags Flags passed by the parser, used to specifying if negative.
- * @return The converted integer.
+ * @return The converted signed integer.
  */
 static int rini_signed_int_str(char* str, parser_flags_t* flags)
 {
@@ -135,13 +123,12 @@ static int rini_signed_int_str(char* str, parser_flags_t* flags)
  */
 static int rini_is_escaped(char c)
 {
-    // https://en.wikipedia.org/wiki/INI_file#Escape_characters
     const char escape_chars[] = {
             '"', ';', '#', ':',
             '=', '\\'
     };
 
-    for (int i = 0; i < ARRAY_SIZE(escape_chars); i++)
+    for (unsigned i = 0; i < ARRAY_SIZE(escape_chars); i++)
     {
         if (c == escape_chars[i])
         {
@@ -161,25 +148,24 @@ static int rini_is_escaped(char c)
  */
 static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
 {
-    if (buf == NULL || buf_size > MAX_BOOL_KEY_SIZE)
+    if (buf == NULL || buf_size > (MAX_BOOL_KEY_SIZE - 1))
+    {
         return BOOL_KEY_ERROR;
+    }
 
     bool_keys_t bool_keys[] = {
             { BOOL_KEY_TRUE, "1", 1 }, { BOOL_KEY_TRUE, "yes", 3 },
             { BOOL_KEY_TRUE, "on", 2 }, { BOOL_KEY_TRUE, "true", 4 },
+            { BOOL_KEY_TRUE, "y", 1 },
             { BOOL_KEY_FALSE, "0", 1 },  { BOOL_KEY_FALSE, "no", 2 },
-            { BOOL_KEY_FALSE, "off", 3 }, { BOOL_KEY_FALSE, "false", 5 }
+            { BOOL_KEY_FALSE, "off", 3 }, { BOOL_KEY_FALSE, "false", 5 },
+            { BOOL_KEY_FALSE, "n", 1 }
     };
 
     char bool_key[MAX_BOOL_KEY_SIZE];
-
-#ifdef __STDC_HOSTED__
-    rini_memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
-    rini_memcpy(bool_key, buf, buf_size);
-#else
     memset(bool_key, 0, MAX_BOOL_KEY_SIZE);
+
     memcpy(bool_key, buf, buf_size);
-#endif
 
     for (unsigned i = 0; i < ARRAY_SIZE(bool_keys); i++)
     {
@@ -188,13 +174,7 @@ static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
             continue;
         }
 
-        if (
-#ifdef __STDC_HOSTED__
-            rini_memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
-#else
-            memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0
-#endif
-            )
+        if (memcmp(bool_key, bool_keys[i].key, bool_keys[i].size) == 0)
         {
             return bool_keys[i].val;
         }
@@ -209,12 +189,12 @@ static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
  * parse the value. Once the value has been parsed, we do the relevant operations to convert it into
  * the data type specified in the @param val_type.
  *
- * @param node Usually the line which is to be parsed.
+ * @param node In all cases with Rini, this will be the line to parse, this function does not handle line parsing.
  * @param name The name to the key to parse.
- * @param out The buffer to send the output to.
- * @param out_size The size of the output buffer.
- * @param val_type The type of value that we are parsing.
- * @param size The overall size of the configuration
+ * @param out The buffer to send the output to. The type is of a void pointer as the type can be variable, as defined by @param val_type.
+ * @param out_size The size of the output buffer. We must know this in order to make sure that the parsed data is no greater than this value.
+ * @param val_type The type of value that we are parsing, the relevant conversions will take place towards the end of the function.
+ * @param size The overall size of the configuration buffer, this will make sure that the @param out_size is not greater than our overall size.
  * @return Returns 1 on success.
  */
 static int rini_get_node(char* node, char* name, void* out, unsigned out_size, value_types_t val_type, unsigned size)
@@ -231,13 +211,9 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
 
     char name_parsed[MAX_NAME], int_str[MAX_INT_STR_SIZE], bool_str[MAX_BOOL_KEY_SIZE];
 
-#ifdef __STDC_HOSTED__
-    rini_memset(name_parsed, 0, MAX_NAME);
-    rini_memset(int_str, 0, MAX_INT_STR_SIZE);
-#else
     memset(name_parsed, 0, MAX_NAME);
     memset(int_str, 0, MAX_INT_STR_SIZE);
-#endif
+    memset(bool_str, 0, MAX_BOOL_KEY_SIZE);
 
     char* name_buf = (char*)name_parsed, *int_buf = (char*)int_str, *bool_buf = (char*)bool_str, *node_buf = node;
     unsigned buf_size = 0, val_size = 1;
@@ -254,13 +230,7 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
             *name_buf++ = *node_buf;
         }
 
-        if (
-#ifdef __STDC_HOSTED__
-            rini_strncmp(name_parsed, name, MAX_NAME) == 0
-#else
-            strncmp(name_parsed, name, MAX_NAME) == 0
-#endif
-            )
+        if (strncmp(name_parsed, name, MAX_NAME) == 0)
         {
             break;
         }
@@ -398,11 +368,7 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
             return 0;
         }
 
-#ifdef __STDC_HOSTED__
-        rini_memcpy(out, &numb_buf, sizeof(int));
-#else
         memcpy(out, &numb_buf, sizeof(int));
-#endif
     }
     else if (val_type == BOOL_VAL)
     {
@@ -431,9 +397,9 @@ static int rini_get_node(char* node, char* name, void* out, unsigned out_size, v
  * @param type The type of data that the key holds.
  * @return On success 1 is returned
  */
-int rini_get_key(const char* parent, char* key, char* config, unsigned config_size, const void* out, unsigned out_size, value_types_t type)
+int rini_get_key(const char* parent, const char* key, const char* config, unsigned config_size, const void* out, unsigned out_size, value_types_t type)
 {
-    char* config_buf = config;
+    char* config_buf = (char*)config;
 
     if (key != NULL)
     {
@@ -444,12 +410,7 @@ int rini_get_key(const char* parent, char* key, char* config, unsigned config_si
     }
 
     char line[MAX_LINE_SIZE(out_size)];
-
-#ifdef __STDC_HOSTED__
-    rini_memset(line, 0, MAX_NAME);
-#else
-    memset(line, 0, MAX_NAME);
-#endif
+    memset(line, 0, sizeof(line));
 
     char* line_buf = (char*)line;
     unsigned line_size = 0;

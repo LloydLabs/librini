@@ -1,9 +1,7 @@
-//
-// Created by LloydLabs on 9/23/2017.
-//
-
 #ifndef RINI_H
 #define RINI_H
+
+#include <string.h>
 
 #define PTR_NOT_END(a) (*(a) != '\r' && *(a) != '\n' && *(a) != 0)
 
@@ -47,5 +45,7 @@ typedef struct _bool_key_record_t {
     char* key;
     unsigned size;
 } bool_keys_t;
+
+int rini_get_key(const char* parent, const char* key, const char* config, unsigned config_size, const void* out, unsigned out_size, value_types_t type);
 
 #endif // RINI_H
