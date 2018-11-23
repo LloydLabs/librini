@@ -80,7 +80,7 @@ static char* rini_seek_section(const char* parent, char* config_buf,
  * @param c The character to check
  * @return This will return 1 on success
  */
-static int rini_is_escaped(char c)
+static bool rini_is_escaped(char c)
 {
     const char escape_chars[] = {
             '"', ';', '#', ':',
@@ -91,11 +91,11 @@ static int rini_is_escaped(char c)
     {
         if (c == escape_chars[i])
         {
-            return 1;
+            return true;
         }
     }
 
-    return 0;
+    return false;
 }
 
 /**
@@ -156,18 +156,18 @@ static bool_type_t rini_get_bool(char* buf, unsigned buf_size)
  * @param size The overall size of the configuration buffer, this will make sure that the @param out_size is not greater than our overall size.
  * @return Returns 1 on success.
  */
-static int rini_get_node(char* node, char* name, void* out,
+static bool rini_get_node(char* node, char* name, void* out,
                          unsigned out_size, value_types_t val_type,
                          unsigned size)
 {
     if (out == NULL)
     {
-        return 0;
+        return false;
     }
 
     if (val_type == INT_VAL && out_size < sizeof(int))
     {
-        return 0;
+        return false;
     }
 
     char name_parsed[MAX_NAME], int_str[MAX_INT_STR_SIZE], bool_str[MAX_BOOL_KEY_SIZE];
@@ -185,7 +185,7 @@ static int rini_get_node(char* node, char* name, void* out,
         {
             if ((buf_size + 1) >= MAX_NAME)
             {
-                return 0;
+                return false;
             }
 
             *name_buf++ = *node_buf;
@@ -199,12 +199,12 @@ static int rini_get_node(char* node, char* name, void* out,
 
     if (*node_buf != '=')
     {
-        return 0;
+        return false;
     }
 
     if (buf_size++ > size)
     {
-        return 0;
+        return false;
     }
 
     node_buf++;
@@ -233,7 +233,7 @@ static int rini_get_node(char* node, char* name, void* out,
             case STRING_VAL:
                 if ((val_size + 1) > out_size)
                 {
-                    return 0;
+                    return false;
                 }
 
                 if (buf_size == 0)
@@ -286,7 +286,7 @@ static int rini_get_node(char* node, char* name, void* out,
             case BOOL_VAL:
                 if (val_size > (MAX_BOOL_KEY_SIZE - 1))
                 {
-                    return 0;
+                    return false;
                 }
 
                 *bool_buf++ = *node_buf;
@@ -295,7 +295,7 @@ static int rini_get_node(char* node, char* name, void* out,
             case INT_VAL:
                 if (val_size > (MAX_INT_STR_SIZE - 1))
                 {
-                    return 0;
+                    return false;
                 }
 
                 if (buf_size == 0 && *node_buf == '-')
@@ -306,7 +306,7 @@ static int rini_get_node(char* node, char* name, void* out,
 
                 if (*node_buf < '0' || *node_buf > '9')
                 {
-                    return 0;
+                    return false;
                 }
 
                 *int_buf++ = *node_buf;
@@ -327,7 +327,12 @@ static int rini_get_node(char* node, char* name, void* out,
         char* conv_buf;
         if ((numb_buf = (int)strtol(int_buf, &conv_buf, 10)) < 0)
         {
-            return 0;
+            return false;
+        }
+
+        if (conv_buf == NULL)
+        {
+            return false;
         }
 
         memcpy(out, &numb_buf, sizeof(int));
@@ -337,13 +342,13 @@ static int rini_get_node(char* node, char* name, void* out,
         bool_type_t bool_val = BOOL_KEY_ERROR;
         if ((bool_val = rini_get_bool(bool_str, val_size)) == BOOL_KEY_ERROR)
         {
-            return 0;
+            return false;
         }
 
         *val_buf = bool_val;
     }
 
-    return 1;
+    return true;
 }
 
 /**
@@ -359,7 +364,7 @@ static int rini_get_node(char* node, char* name, void* out,
  * @param type The type of data that the key holds.
  * @return On success 1 is returned
  */
-int rini_get_key(const char* parent, const char* key, const char* config,
+bool rini_get_key(const char* parent, const char* key, const char* config,
                  unsigned config_size, const void* out, unsigned out_size,
                  value_types_t type)
 {
@@ -369,7 +374,7 @@ int rini_get_key(const char* parent, const char* key, const char* config,
     {
         if ((config_buf = rini_seek_section(parent, config_buf, config_size)) == NULL)
         {
-            return 0;
+            return false;
         }
     }
 
@@ -386,7 +391,7 @@ int rini_get_key(const char* parent, const char* key, const char* config,
         {
             if ((line_size + 1) >= MAX_LINE_SIZE(out_size))
             {
-                return 0;
+                return false;
             }
 
             if (line_size == 0)
@@ -407,11 +412,11 @@ int rini_get_key(const char* parent, const char* key, const char* config,
 
         if (rini_get_node(line, key, (void*)out, out_size, type, line_size) == 1)
         {
-            return 1;
+            return true;
         }
 
         CLEAN_PTR(line, MAX_NAME, line_buf);
     }
 
-    return 0;
+    return false;
 }
