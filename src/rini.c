@@ -24,7 +24,7 @@ static char* rini_seek_section(const char* parent, char* config_buf,
                                unsigned size)
 {
     unsigned buf_size = 0;
-    int head_found = 0;
+    bool head_found = false;
 
     char current_head[MAX_NAME];
     memset(current_head, 0, MAX_NAME);
@@ -61,7 +61,7 @@ static char* rini_seek_section(const char* parent, char* config_buf,
 
             if (strncmp(parent, (const char*)current_head, MAX_NAME) == 0)
             {
-                head_found = 1;
+                head_found = true;
                 break;
             }
             else
@@ -72,48 +72,6 @@ static char* rini_seek_section(const char* parent, char* config_buf,
     }
 
     return (head_found ? config_buf : NULL);
-}
-
-/**
- * Converts a string into a signed integer, two's compliment is used here for converting to negative (bitwise NOT then addition of one.)
- * @param str The string to convert. Please note, strings *may* contain '+' (even though this is somewhat redundant), and also '-'.
- * @param flags Flags passed by the parser, used to specifying if negative.
- * @return The converted signed integer.
- */
-static int rini_signed_int_str(char* str, parser_flags_t* flags)
-{
-    int ret = -1;
-
-    *str++ = 0;
-    str = (char*)str;
-
-    if (*str == '+' || *str == '-')
-    {
-        str++;
-        if (*str == '-')
-        {
-            *flags |= INT_NEG_NUMB;
-        }
-    }
-    else if (*str == '-')
-    {
-        *flags |= INT_NEG_NUMB;
-        str++;
-    }
-
-    for ( ; *str != 0; str++)
-    {
-        ret = ((10 * ret) - (*str - '0'));
-    }
-
-    ret *= -1;
-
-    if (*flags & INT_NEG_NUMB)
-    {
-        ret = (~ret) + 1;
-    }
-
-    return ret;
 }
 
 /**
@@ -366,7 +324,8 @@ static int rini_get_node(char* node, char* name, void* out,
         int_buf = (char*)int_str;
 
         int numb_buf;
-        if ((numb_buf = rini_signed_int_str(int_buf, &parser_flags)) < 0)
+        char* conv_buf;
+        if ((numb_buf = (int)strtol(int_buf, &conv_buf, 10)) < 0)
         {
             return 0;
         }

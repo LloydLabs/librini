@@ -2,6 +2,7 @@
 #define RINI_H
 
 #include <string.h>
+#include <stdbool.h>
 
 #define PTR_NOT_END(a) (*(a) != '\r' && *(a) != '\n' && *(a) != 0)
 
